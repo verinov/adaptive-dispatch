@@ -27,12 +27,44 @@ template <typename Sort> struct CheckedSort : public Sort {
   }
 };
 
-template <typename Sort, typename T>
-void BM_Sorted(benchmark::State &state, T zero, Sort sort) {
+template <typename T> struct AdaptiveSort {
+  static auto MakeFunc() {
+    return Dispatch<std::vector<T> &>(std::make_tuple(
+        [](auto &x) { std::sort(std::begin(x), std::end(x)); },
+        [](auto &x) { std::stable_sort(std::begin(x), std::end(x)); },
+        CheckedSort<StdSort<T>>{}));
+  }
+
+  decltype(MakeFunc()) func = MakeFunc();
+  void operator()(std::vector<T> &x) { return func(x); }
+};
+
+// alternative implementation of AdaptiveSort
+template <typename T> struct AnotherAdaptiveSort {
+  TimingSelector<3> selector{};
+
+  void operator()(std::vector<T> &x) {
+    switch (auto timer = selector.GetOptionTimed()) {
+    case 0:
+      std::sort(std::begin(x), std::end(x));
+      break;
+    case 1:
+      std::stable_sort(std::begin(x), std::end(x));
+      break;
+    case 2:
+      if (!std::is_sorted(std::begin(x), std::end(x))) {
+        std::sort(std::begin(x), std::end(x));
+      }
+      break;
+    } // switch
+  }
+};
+
+template <typename Sort> void BM_Sorted(benchmark::State &state, Sort sort) {
   for (auto _ : state) {
     int n = state.range(0);
-    std::vector<T> v(n);
-    std::iota(std::begin(v), std::end(v), zero);
+    std::vector<int> v(n);
+    std::iota(std::begin(v), std::end(v), 0);
 
     sort(v);
 
@@ -41,12 +73,26 @@ void BM_Sorted(benchmark::State &state, T zero, Sort sort) {
   }
 }
 
-template <typename Sort, typename T>
-void BM_Reversed(benchmark::State &state, T zero, Sort sort) {
+template <typename Sort> void BM_Reversed(benchmark::State &state, Sort sort) {
   for (auto _ : state) {
     int n = state.range(0);
-    std::vector<T> v(n);
-    std::iota(std::rbegin(v), std::rend(v), zero);
+    std::vector<int> v(n);
+    std::iota(std::rbegin(v), std::rend(v), 0);
+
+    sort(v);
+
+    benchmark::DoNotOptimize(v.data());
+    benchmark::ClobberMemory();
+  }
+}
+
+template <typename Sort>
+void BM_AlmostSorted(benchmark::State &state, Sort sort) {
+  for (auto _ : state) {
+    int n = state.range(0);
+    std::vector<int> v(n);
+    std::iota(std::begin(v), std::end(v), 0);
+    std::swap(v[n - 1], v[n - 2]);
 
     sort(v);
 
@@ -56,26 +102,21 @@ void BM_Reversed(benchmark::State &state, T zero, Sort sort) {
 }
 
 static void CustomArguments(benchmark::internal::Benchmark *b) {
-  b->Arg(2)->Arg(10)->Arg(50)->Arg(1000)->Arg(1 << 15);
+  b->Arg(8)->Arg(16)->Arg(64)->Arg(1024)->Arg(1 << 15);
 }
 
 #define SORT_BENCHMARK(BM_fn, sort)                                            \
-  BENCHMARK_CAPTURE(BM_fn, sort, int(0), (sort))->Apply(CustomArguments)
+  BENCHMARK_CAPTURE(BM_fn, sort, (sort))->Apply(CustomArguments)
 
-StdSort<int> std_sort;
-StdStableSort<int> std_stable_sort;
-CheckedSort<StdSort<int>> checked_std_sort;
+#define SORT_BENCHMARKS(BM_fn)                                                 \
+  SORT_BENCHMARK(BM_fn, StdSort<int>{});                                       \
+  SORT_BENCHMARK(BM_fn, StdStableSort<int>{});                                 \
+  SORT_BENCHMARK(BM_fn, CheckedSort<StdSort<int>>{});                          \
+  SORT_BENCHMARK(BM_fn, AnotherAdaptiveSort<int>{});                           \
+  SORT_BENCHMARK(BM_fn, AdaptiveSort<int>{})
 
-SORT_BENCHMARK(BM_Sorted, std_sort);
-SORT_BENCHMARK(BM_Sorted, std_stable_sort);
-SORT_BENCHMARK(BM_Sorted, checked_std_sort);
-SORT_BENCHMARK(BM_Sorted, Dispatch<std::vector<int> &>(std::make_tuple(
-                              checked_std_sort, std_stable_sort, std_sort)));
-
-SORT_BENCHMARK(BM_Reversed, std_sort);
-SORT_BENCHMARK(BM_Reversed, std_stable_sort);
-SORT_BENCHMARK(BM_Reversed, checked_std_sort);
-SORT_BENCHMARK(BM_Reversed, Dispatch<std::vector<int> &>(std::make_tuple(
-                                checked_std_sort, std_stable_sort, std_sort)));
+SORT_BENCHMARKS(BM_Sorted);
+SORT_BENCHMARKS(BM_Reversed);
+SORT_BENCHMARKS(BM_AlmostSorted);
 
 BENCHMARK_MAIN();

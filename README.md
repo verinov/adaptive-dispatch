@@ -14,6 +14,7 @@ Then run benchmarks (from `build` directory):
 
 # The option with images
 mkdir benchmark_results
-./src/Test --benchmark_repetitions=5 --benchmark_report_aggregates_only=false --benchmark_out_format=csv --benchmark_out=bm_results.csv
-python ../benchmark_results.py
+./src/Test --benchmark_repetitions=5 --benchmark_report_aggregates_only=false \
+    --benchmark_out_format=csv --benchmark_out=bm_results.csv \
+&& python ../benchmark_results.py
 ```

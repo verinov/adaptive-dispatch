@@ -1,6 +1,9 @@
+import collections
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+from scipy.stats import mstats
 
 BM_OUTPUT = "bm_results.csv"
 IMG_DIR = "benchmark_results"
@@ -21,6 +24,8 @@ data = pd.DataFrame(
     }
 )
 
+impl_gmeans = collections.defaultdict(list)
+
 for case, case_df in data.groupby("case"):
     case_df = case_df.copy()
     min_times = case_df.groupby("size").aggregate("time").min()
@@ -34,7 +39,14 @@ for case, case_df in data.groupby("case"):
     plt.title(case)
     sns.despine(bottom=True, left=True)
 
-    sns.stripplot(
+    print(case)
+    for impl, impl_df in case_df.groupby("Implementation"):
+        gmean = mstats.gmean(impl_df.relative_time)
+        impl_gmeans[impl].append(gmean)
+        print(f"\t{impl:30s} {gmean}")
+    print()
+
+    ax = sns.stripplot(
         y="relative_time",
         x="size",
         hue="Implementation",
@@ -43,4 +55,9 @@ for case, case_df in data.groupby("case"):
         alpha=0.5,
         zorder=1,
     )
+    ax.set_yscale("log")
     plt.savefig(f"{IMG_DIR}/{case}.png")
+
+print("Overall")
+for impl, gmeans in impl_gmeans.items():
+    print(f"\t{impl:30s} {mstats.gmean(gmeans)}")
