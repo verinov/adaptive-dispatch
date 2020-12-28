@@ -115,4 +115,4 @@ Data before aggregation:
 ![Reversted](/benchmark_results/BM_Reversed.png)
 ![Almost sorted](/benchmark_results/BM_AlmostSorted.png)
 
-Almost sorted test takes a sorted vector, and swaps last to items.
+Almost sorted test takes a sorted vector, and swaps the last two items.
