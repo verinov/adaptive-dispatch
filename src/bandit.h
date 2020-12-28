@@ -30,11 +30,8 @@ public:
     }
   }
 
-  operator int() const && {
-    // can't use rvalue for timing
-    selector_ = nullptr;
-    return option_;
-  }
+  // can't use rvalue for timing
+  operator int() const && = delete;
   operator int() & {
     if (selector_) {
       start_time_ = __rdtsc();
@@ -68,7 +65,7 @@ template <int N> class TimingSelector {
   enum class Phase : char { exploit, warmup, measure } phase_ = Phase::exploit;
 
   // Cold memory
-  OptionIntegralT best_option_;
+  OptionIntegralT best_option_{0};
   OptionIntegralT last_best_option_{-1};
   int best_option_streak_{0};
   typename TimerT::DurationT current_duration_;
@@ -126,6 +123,7 @@ template <int N> class TimingSelector {
   }
 
 public:
+  int GetOption() const { return current_option_; }
   TimerT GetOptionTimed() {
     if (phase_left_ == 0) {
       NewPhase();
