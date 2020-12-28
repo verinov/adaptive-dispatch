@@ -1,5 +1,22 @@
+# Intro
+Suppose you have several functions which solve the same problem, but with
+different trade-offs and edge cases (like different ways to sort).
+Or you need to select a hyperparameter value out of a set of
+reasonable options (use 1, 2 or 4 threads for a job). This library lets you
+make this kinds of decisions based on runtime feedback.
+
+More generally, this library tries to make an on average good choice
+from a fixed set of options at runtime.
+"Goodness" here is judged by a number, which is potentially known
+after each execution.
+At the moment, there is only the number of CPU cycles. It is measured on a small
+fraction of calls to reduce the overhead.
+
+This library is at PoC stage, more sophisticated selection strategies
+are yet to come. 
+
 # Usage
-The implementation is in `src/*.h` and has no external dependencies.
+The implementation is in `src/*.h`. It has no external dependencies.
 
 As is done in `src/test.cpp`, let's consider choosing a sorting algorithm implementation out of a few options. Using this library, this might look like:
 ```c++
@@ -73,13 +90,19 @@ mkdir benchmark_results
 && python ../benchmark_results.py
 ```
 
-## Example result
-All results below are in terms of relative execution time.
-To get them, each timing (in nanoseconds) is divided by the lowest time
-reached by any algorithm on that benchmark (benchmark name, input size).
+## Example results
+We ran the following benchmark scenarios:
+- Almost sorted data: [0, 1, ..., N-3, N-1, N-2]
+  (sorted vector, but with the last two items swapped)
+- Reversed data: [N-1, N-2, ..., 1, 0]
+- Sorted data: [0, 1, ..., N-2, N-1]
 
-Geometric mean over input sizes for each (benchmark name, algorithm) pair,
-and then geometric mean of these geometric means over benchmark names:
+They were executed for N in [8, 16, 64, 2^10, 2^15].
+
+Each (scenario, N) pair was executed with each tested algorithm 5 times, and
+normalized by the time of the fasted sample (hence relative time).
+
+Geometric mean of relative times, grouping by (scenario, algorithm):
 ```
 BM_AlmostSorted
         AdaptiveSort<int>{}            1.1144566731696144
@@ -101,7 +124,10 @@ BM_Sorted
         CheckedSort<StdSort<int>>{}    1.032098123866385
         StdSort<int>{}                 4.198302303266702
         StdStableSort<int>{}           6.169533565071652
+```
 
+Geomean of the geomeans above, now grouping by just algorithm:
+```
 Overall
         AdaptiveSort<int>{}            1.1286532602812622
         AnotherAdaptiveSort<int>{}     1.129070306399413
@@ -110,9 +136,7 @@ Overall
         StdStableSort<int>{}           2.5972827267867578
 ```
 
-Data before aggregation:
+Data before the aggregations:
 ![Sorted](/benchmark_results/BM_Sorted.png)
 ![Reversted](/benchmark_results/BM_Reversed.png)
 ![Almost sorted](/benchmark_results/BM_AlmostSorted.png)
-
-Almost sorted test takes a sorted vector, and swaps the last two items.
