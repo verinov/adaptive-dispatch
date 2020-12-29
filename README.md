@@ -1,24 +1,29 @@
 # Intro
-Suppose you have several functions which solve the same problem, but with
-different trade-offs and edge cases (like different ways to sort).
-Or you need to select a hyperparameter value out of a set of
-reasonable options (use 1, 2 or 4 threads for a job). This library lets you
-make this kinds of decisions based on runtime feedback.
+`adaptive-dispatch` is a C++ library to optimize parameter choice
+from a fixed set of options at runtime.
+
+Suppose you have several functions which solve the same problem
+but with different trade-offs and edge cases (e.g. different ways to sort).
+Or you need to select a hyperparameter value out of a set of reasonable options
+(e.g. use 1, 2 or 4 threads for a job).
+`adaptive-dispatch` library lets you make this kind of decisions
+based on runtime feedback.
 
 More generally, this library tries to make an on average good choice
-from a fixed set of options at runtime.
-"Goodness" here is judged by a number, which is potentially known
-after each execution.
-At the moment, there is only the number of CPU cycles. It is measured on a small
-fraction of calls to reduce the overhead.
+from a fixed set of options at runtime. "Goodness" here is judged by a number,
+potentially known after each execution. "Goodness" is measured on a small
+fraction of calls to reduce the overhead. 
 
-This library is at PoC stage, more sophisticated selection strategies
-are yet to come. 
+At the moment, only the number of CPU cycles is implemented. 
+
+This library is at PoC stage, and more sophisticated selection strategies
+are yet to come.
 
 # Usage
 The implementation is in `src/*.h`. It has no external dependencies.
 
-As is done in `src/test.cpp`, let's consider choosing a sorting algorithm implementation out of a few options. Using this library, this might look like:
+As is done in `src/test.cpp`, let's consider choosing a sorting algorithm
+implementation out of a few options. Using this library, this might look like:
 ```c++
 #include <algorithm>
 #include <vector>
